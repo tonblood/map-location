@@ -2,8 +2,9 @@ import { Divider, FormControl, Grid, InputLabel, MenuItem, Select, SelectChangeE
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Feature, MapModel } from './model';
-import Map, { FullscreenControl, GeolocateControl, MapRef, Marker, NavigationControl, ScaleControl } from '@vis.gl/react-maplibre';
+import Map, { FullscreenControl, GeolocateControl, Layer, MapLayerMouseEvent, MapRef, Marker, NavigationControl, ScaleControl, Source } from '@vis.gl/react-maplibre';
 import LocationPinIcon from '@mui/icons-material/LocationPin';
+import { clusterCountLayer, clusterLayer, unclusteredLayer } from './layers';
 
 const sky = {
     'sky-color': '#80ccff',
@@ -22,6 +23,7 @@ const HompageMap = () => {
     const [optionList, setOptionList] = useState<Feature[]>()
     const [center, setCenter] = useState<number[]>([])
     const mapRef = useRef<MapRef>(null);
+    const [zoom, setZoom] = useState(5);
 
 
     const onSelectCity = useCallback((data: number[]) => {
@@ -31,7 +33,7 @@ const HompageMap = () => {
     useEffect(() => {
 
         getData().then((res: MapModel) => {
-            setOptionList(res.features)
+            // setOptionList(res.features)
             onSelectCity(res.features[0].geometry.coordinates)
             setListOfPin(res.features.map((it, index) => (
                 <Marker
@@ -55,21 +57,23 @@ const HompageMap = () => {
     }, []);
 
     const getData = async () => {
-        const res = await fetch('https://v2k-dev.vallarismaps.com/core/api/features/1.1/collections/658cd4f88a4811f10a47cea7/items?api_key=bLNytlxTHZINWGt1GIRQBUaIlqz9X45XykLD83UkzIoN6PFgqbH7M7EDbsdgKVwC ')
+        const res = await fetch('https://v2k-dev.vallarismaps.com/core/api/features/1.1/collections/658cd4f88a4811f10a47cea7/items?api_key=bLNytlxTHZINWGt1GIRQBUaIlqz9X45XykLD83UkzIoN6PFgqbH7M7EDbsdgKVwC&limit=1')
         const data = await res.json()
         return data
     }
 
     const handleSelectedField = (event: SelectChangeEvent) => {
         const data: number[] = JSON.parse(event.target.value)
-        // setViewState({
-        //     longitude: data[0] || 0,
-        //     latitude: data[1] || 0,
-        //     zoom: 3.5,
-        // })
         onSelectCity(data)
         setCenter(data)
     }
+
+    // const handleDbClick = async (e: MapLayerMouseEvent) => {
+    //     const res = await fetch(`https://v2k-dev.vallarismaps.com/core/api/features/1.1/collections/658cd4f88a4811f10a47cea7/items?api_key=bLNytlxTHZINWGt1GIRQBUaIlqz9X45XykLD83UkzIoN6PFgqbH7M7EDbsdgKVwC&limit=10&search=${e.lngLat.lat, e.lngLat.lng}`)
+    //     const data = await res.json()
+    //     console.log(data)
+    //     return data
+    // }
 
     return (
         <div>
@@ -91,12 +95,26 @@ const HompageMap = () => {
                             mapStyle="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
                             sky={sky}
                             terrain={terrain}
+                            // onZoomEnd={(e) => console.log(e.viewState.zoom)}                            
                         >
                             <GeolocateControl position="top-left" />
                             <FullscreenControl position="top-left" />
                             <NavigationControl position="top-left" />
                             <ScaleControl />
-                            {listOfPin}
+                            {/* {listOfPin} */}
+                            <Source
+                                id="earthquakes"
+                                type="geojson"
+                                data="https://v2k-dev.vallarismaps.com/core/api/features/1.1/collections/658cd4f88a4811f10a47cea7/items?api_key=bLNytlxTHZINWGt1GIRQBUaIlqz9X45XykLD83UkzIoN6PFgqbH7M7EDbsdgKVwC&limit=10000"
+                                cluster={true}
+                                clusterMaxZoom={11}
+                                clusterRadius={50}
+
+                            >
+                                <Layer {...clusterLayer} />
+                                <Layer {...clusterCountLayer} />
+                                <Layer {...unclusteredLayer} />
+                            </Source>
 
                         </Map>
                     </div>
@@ -114,7 +132,6 @@ const HompageMap = () => {
                                 label="Select Place"
                                 value={JSON.stringify(center)}
                             >
-                                
                                 {optionList?.map((it) => {
                                     return <MenuItem value={JSON.stringify(it.geometry.coordinates)}>{it.geometry.coordinates[0]} - {it.geometry.coordinates[1]}</MenuItem>
                                 })}
@@ -127,7 +144,7 @@ const HompageMap = () => {
                         <br />
                         <br />
                         <span className='text-sm'>รูปภาพเพิ่มเติม</span>
-                        
+
 
                     </div>
 
